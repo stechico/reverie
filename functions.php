@@ -116,9 +116,11 @@ foreach ($sidebars as $sidebar) {
 }
 
 // return entry meta information for posts, used by multiple loops.
-function reverie_entry_meta() {
-	echo '<time class="updated" datetime="'. get_the_time('c') .'" pubdate>'. sprintf(__('Posted on %s at %s.', 'reverie'), get_the_time('l, F jS, Y'), get_the_time()) .'</time>';
-	echo '<p class="byline author vcard">'. __('Written by', 'reverie') .' <a href="'. get_author_posts_url(get_the_author_meta('ID')) .'" rel="author" class="fn">'. get_the_author() .'</a></p>';
+if (!function_exists('reverie_entry_meta')) {
+	function reverie_entry_meta() {
+		echo '<time class="updated" datetime="'. get_the_time('c') .'" pubdate>'. sprintf(__('Posted on %s at %s.', 'reverie'), get_the_time('l, F jS, Y'), get_the_time()) .'</time>';
+		echo '<p class="byline author vcard">'. __('Written by', 'reverie') .' <a href="'. get_author_posts_url(get_the_author_meta('ID')) .'" rel="author" class="fn">'. get_the_author() .'</a></p>';
+	}
 }
 
 /* Customized the output of caption, you can remove the filter to restore back to the WP default output. Courtesy of DevPress. http://devpress.com/blog/captions-in-wordpress/ */
@@ -185,6 +187,51 @@ function image_tag($html, $id, $alt, $title) {
 		$html);
 }
 add_filter('get_image_tag', 'image_tag', 0, 4);
+
+// Customize the output of menus to fit the ZURB navigation style. Courtesy of Kriesi.at. http://www.kriesi.at/archives/improve-your-wordpress-navigation-menu-output
+class description_walker extends Walker_Nav_Menu {
+	function start_el(&$output, $item, $depth, $args)
+	{
+		global $wp_query;
+		$indent = ( $depth ) ? str_repeat( "\t", $depth ) : '';
+		
+		$class_names = $value = '';
+		
+		$classes = empty( $item->classes ) ? array() : (array) $item->classes;
+		
+		$class_names = join( ' ', apply_filters( 'nav_menu_css_class', array_filter( $classes ), $item ) );
+		$class_names = ' class="'. esc_attr( $class_names ) . '"';
+		
+		$output .= $indent . '<dd id="menu-item-'. $item->ID . '-dd"' . $value . $class_names .'>';
+		
+		$attributes  = ! empty( $item->attr_title ) ? ' title="'  . esc_attr( $item->attr_title ) .'"' : '';
+		$attributes .= ! empty( $item->target )     ? ' target="' . esc_attr( $item->target     ) .'"' : '';
+		$attributes .= ! empty( $item->xfn )        ? ' rel="'    . esc_attr( $item->xfn        ) .'"' : '';
+		$attributes .= ! empty( $item->url )        ? ' href="'   . esc_attr( $item->url        ) .'"' : '';
+		
+		$prepend = '';
+		$append = '';
+		$description  = ! empty( $item->description ) ? '' : '';
+		
+		if($depth != 0)
+		{
+			$description = $append = $prepend = "";
+		}
+		
+		$item_output = $args->before;
+		$item_output .= '<a'. $attributes .'>';
+		$item_output .= $args->link_before .$prepend.apply_filters( 'the_title', $item->title, $item->ID ).$append;
+		$item_output .= $description.$args->link_after;
+		$item_output .= '</a>';
+		$item_output .= $args->after;
+		
+		$output .= apply_filters( 'walker_nav_menu_start_el', $item_output, $item, $depth, $args );
+	}
+	function end_el(&$output, $item, $depth) {
+		$output .= "</dd>\n";
+	}
+}
+
 
 // Customize output for menu
 class reverie_walker extends Walker_Nav_Menu {
