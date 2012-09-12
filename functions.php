@@ -19,6 +19,82 @@ function reverie_setup() {
 }
 add_action('after_setup_theme', 'reverie_setup');
 
+// Enqueue for header and footer, thanks to flickapix on Github.
+// Enqueue css files
+function reverie_css() {
+  if ( !is_admin() ) {
+  
+     wp_register_style( 'foundation',get_template_directory_uri() . '/css/foundation.css', false );
+     wp_enqueue_style( 'foundation' );
+    
+     wp_register_style( 'app',get_template_directory_uri() . '/css/app.css', false );
+     wp_enqueue_style( 'app' );
+     
+     // Load style.css to allow contents overwrite foundation & app css
+     wp_register_style( 'style',get_template_directory_uri() . '/style.css', false );
+     wp_enqueue_style( 'style' );
+     
+     wp_register_style( 'google_font',"http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,400,300", false );
+     wp_enqueue_style( 'google_font' );
+     
+  }
+}  
+add_action( 'init', 'reverie_css' );
+
+function reverie_ie_css () {
+    echo '<!--[if lt IE 9]>';
+    echo '<link rel="stylesheet" href="<?php echo get_template_directory_uri(); ?>/css/ie.css">';
+    echo '<![endif]-->';
+}
+add_action( 'wp_head', 'reverie_ie_css' );
+
+// Enqueue js files
+function reverie_scripts() {
+
+global $is_IE;
+
+  if ( !is_admin() ) {
+  
+  // Enqueue to header
+     wp_deregister_script( 'jquery' );
+     wp_register_script( 'jquery', get_template_directory_uri() . '/js/jquery.min.js' );
+     wp_enqueue_script( 'jquery' );
+     
+     wp_register_script( 'modernizr', get_template_directory_uri() . '/js/modernizr.foundation.js', array( 'jquery' ) );
+     wp_enqueue_script( 'modernizr' );
+ 
+  // Enqueue to footer
+     wp_register_script( 'reveal', get_template_directory_uri() . '/js/jquery.reveal.js', array( 'jquery' ), false, true );
+     wp_enqueue_script( 'reveal' );
+     
+     wp_register_script( 'orbit', get_template_directory_uri() . '/js/jquery.orbit-1.4.0.js', array( 'jquery' ), false, true );
+     wp_enqueue_script( 'orbit' );
+     
+     wp_register_script( 'custom_forms', get_template_directory_uri() . '/js/jquery.customforms.js', array( 'jquery' ), false, true );
+     wp_enqueue_script( 'custom_forms' );
+     
+     wp_register_script( 'placeholder', get_template_directory_uri() . '/js/jquery.placeholder.min.js', array( 'jquery' ), false, true );
+     wp_enqueue_script( 'placeholder' );
+     
+     wp_register_script( 'tooltips', get_template_directory_uri() . '/js/jquery.tooltips.js', array( 'jquery' ), false, true );
+     wp_enqueue_script( 'tooltips' );
+     
+     wp_register_script( 'app', get_template_directory_uri() . '/js/app.js', array( 'jquery' ), false, true );
+     wp_enqueue_script( 'app' );
+     
+    
+     if ($is_IE) {
+        wp_register_script ( 'html5shiv', "http://html5shiv.googlecode.com/svn/trunk/html5.js" , false, true);
+        wp_enqueue_script ( 'html5shiv' );
+     } 
+     
+     // Enable threaded comments 
+     if ( (!is_admin()) && is_singular() && comments_open() && get_option('thread_comments') )
+		wp_enqueue_script('comment-reply');
+  }
+}
+add_action( 'init', 'reverie_scripts' );
+
 // create widget areas: sidebar, footer
 $sidebars = array('Sidebar');
 foreach ($sidebars as $sidebar) {
@@ -40,11 +116,9 @@ foreach ($sidebars as $sidebar) {
 }
 
 // return entry meta information for posts, used by multiple loops.
-if (!function_exists('reverie_entry_meta')) {
-    function reverie_entry_meta() {
-    	echo '<time class="updated" datetime="'. get_the_time('c') .'" pubdate>'. sprintf(__('Posted on %s at %s.', 'reverie'), get_the_time('l, F jS, Y'), get_the_time()) .'</time>';
-    	echo '<p class="byline author vcard">'. __('Written by', 'reverie') .' <a href="'. get_author_posts_url(get_the_author_meta('id')) .'" rel="author" class="fn">'. get_the_author() .'</a></p>';
-    }
+function reverie_entry_meta() {
+	echo '<time class="updated" datetime="'. get_the_time('c') .'" pubdate>'. sprintf(__('Posted on %s at %s.', 'reverie'), get_the_time('l, F jS, Y'), get_the_time()) .'</time>';
+	echo '<p class="byline author vcard">'. __('Written by', 'reverie') .' <a href="'. get_author_posts_url(get_the_author_meta('ID')) .'" rel="author" class="fn">'. get_the_author() .'</a></p>';
 }
 
 /* Customized the output of caption, you can remove the filter to restore back to the WP default output. Courtesy of DevPress. http://devpress.com/blog/captions-in-wordpress/ */
@@ -112,50 +186,24 @@ function image_tag($html, $id, $alt, $title) {
 }
 add_filter('get_image_tag', 'image_tag', 0, 4);
 
-// Customize the output of menus to fit the ZURB navigation style. Courtesy of Kriesi.at. http://www.kriesi.at/archives/improve-your-wordpress-navigation-menu-output
-class description_walker extends Walker_Nav_Menu
-{
-	function start_el(&$output, $item, $depth, $args)
-	{
-		global $wp_query;
-		$indent = ( $depth ) ? str_repeat( "\t", $depth ) : '';
-		
-		$class_names = $value = '';
-		
-		$classes = empty( $item->classes ) ? array() : (array) $item->classes;
-		
-		$class_names = join( ' ', apply_filters( 'nav_menu_css_class', array_filter( $classes ), $item ) );
-		$class_names = ' class="'. esc_attr( $class_names ) . '"';
-		
-		$output .= $indent . '<dd id="menu-item-'. $item->ID . '-dd"' . $value . $class_names .'>';
-		
-		$attributes  = ! empty( $item->attr_title ) ? ' title="'  . esc_attr( $item->attr_title ) .'"' : '';
-		$attributes .= ! empty( $item->target )     ? ' target="' . esc_attr( $item->target     ) .'"' : '';
-		$attributes .= ! empty( $item->xfn )        ? ' rel="'    . esc_attr( $item->xfn        ) .'"' : '';
-		$attributes .= ! empty( $item->url )        ? ' href="'   . esc_attr( $item->url        ) .'"' : '';
-		
-		$prepend = '';
-		$append = '';
-		$description  = ! empty( $item->description ) ? '' : '';
-		
-		if($depth != 0)
-		{
-			$description = $append = $prepend = "";
-		}
-		
-		$item_output = $args->before;
-		$item_output .= '<a'. $attributes .'>';
-		$item_output .= $args->link_before .$prepend.apply_filters( 'the_title', $item->title, $item->ID ).$append;
-		$item_output .= $description.$args->link_after;
-		$item_output .= '</a>';
-		$item_output .= $args->after;
-		
-		$output .= apply_filters( 'walker_nav_menu_start_el', $item_output, $item, $depth, $args );
-	}
-	function end_el(&$output, $item, $depth) {
-		$output .= "</dd>\n";
-	}
+// Customize output for menu
+class reverie_walker extends Walker_Nav_Menu {
+  function start_lvl(&$output, $depth) {
+    $indent = str_repeat("\t", $depth);
+    $output .= "\n$indent<a href=\"#\" class=\"flyout-toggle\"><span> </span></a><ul class=\"flyout\">\n";
+  }
 }
+
+// Add Foundation 'active' class for the current menu item 
+function reverie_active_nav_class( $classes, $item )
+{
+    if($item->current == 1)
+    {
+        $classes[] = 'active';
+    }
+    return $classes;
+}
+add_filter( 'nav_menu_css_class', 'reverie_active_nav_class', 10, 2 );
 
 // img unautop, Courtesy of Interconnectit http://interconnectit.com/2175/how-to-remove-p-tags-from-images-in-wordpress/
 function img_unautop($pee) {
@@ -163,6 +211,33 @@ function img_unautop($pee) {
     return $pee;
 }
 add_filter( 'the_content', 'img_unautop', 30 );
+
+// Pagination
+function reverie_pagination() {
+	global $wp_query;
+ 
+	$big = 999999999; // This needs to be an unlikely integer
+ 
+	// For more options and info view the docs for paginate_links()
+	// http://codex.wordpress.org/Function_Reference/paginate_links
+	$paginate_links = paginate_links( array(
+		'base' => str_replace( $big, '%#%', get_pagenum_link($big) ),
+		'current' => max( 1, get_query_var('paged') ),
+		'total' => $wp_query->max_num_pages,
+		'mid_size' => 5,
+		'prev_next' => True,
+	    'prev_text' => __('&laquo;'),
+	    'next_text' => __('&raquo;'),
+		'type' => 'list'
+	) );
+ 
+	// Display the pagination if more than one page is found
+	if ( $paginate_links ) {
+		echo '<div class="reverie-pagination">';
+		echo $paginate_links;
+		echo '</div><!--// end .pagination -->';
+	}
+}
 
 // Presstrends
 function presstrends() {
